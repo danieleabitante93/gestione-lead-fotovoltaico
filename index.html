@@ -68,6 +68,1270 @@
   .field{border:1px solid var(--line);border-radius:10px;padding:10px 12px;}
   .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:700;margin-bottom:6px;}
   .field .valrow{display:flex;gap:8px;align-items:flex-start;}
+  .field.field-red{border-color:var(--red-bd);background:var(--red-bg);}
+  .field.field-red label{color:var(--red);}
+  .field.field-red input[type=text], .field.field-red textarea{background:#fff;}
+  .field.field-yellow{border-color:var(--yellow-bd);background:var(--yellow-bg);}
+  .field.field-yellow label{color:var(--yellow);}
+  .field.field-yellow input[type=text], .field.field-yellow textarea{background:#fff;}
+  .field input[type=text], .field textarea{width:100%;border:1px solid transparent;background:#f8fafc;border-radius:6px;padding:6px 8px;font-size:13.5px;font-family:inherit;}
+  .field textarea{min-height:70px;resize:vertical;}
+  .field input[type=text]:focus, .field textarea:focus{outline:none;border-color:var(--accent);background:#fff;}
+  .reasons{font-size:13px;margin-top:14px;}
+  .reasons .r{color:var(--red);margin:3px 0;}
+  .reasons .w{color:var(--yellow);margin:3px 0;}
+  .modal-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;justify-content:flex-end;}
+  .suggest-header{margin-top:18px;padding-top:14px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:2px;}
+  .suggest-header strong{font-size:14px;}
+  .suggest-header .hint{margin:0;}
+  .assigned-banner{background:var(--green-bg);color:var(--green);border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;margin-top:10px;display:flex;align-items:center;gap:10px;}
+  .suggest-list{display:flex;flex-direction:column;gap:10px;margin-top:12px;max-height:340px;overflow-y:auto;}
+  .suggest-card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fbfdff;}
+  .suggest-card.is-assigned{border-color:var(--green-bd);background:var(--green-bg);}
+  .suggest-top{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  .suggest-name{font-weight:700;font-size:13.5px;}
+  .compat-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;}
+  .compat-high{background:var(--green-bg);color:var(--green);}
+  .compat-mid{background:var(--yellow-bg);color:var(--yellow);}
+  .compat-low{background:#f1f5f9;color:var(--muted);}
+  .suggest-reasons{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0;}
+  .reason-chip{font-size:11px;background:#eef2f7;color:var(--muted);padding:2px 8px;border-radius:999px;}
+  .suggest-card button{margin-top:2px;}
+  #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 18px;border-radius:8px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:100;}
+  #toast.show{opacity:1;}
+  .crm-status{font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px;white-space:nowrap;}
+  .crm-status-checking{background:#f1f5f9;color:var(--muted);}
+  .crm-status-online{background:var(--green-bg);color:var(--green);}
+  .crm-status-offline{background:#f1f5f9;color:var(--muted);}
+  .dup-cell{width:28px;text-align:center;}
+  .dup-icon{cursor:help;}
+  tr.qrow-dupe{outline:2px solid #a855f7;outline-offset:-2px;}
+  .dup-banner{background:#f5f3ff;border:1px solid #ddd6fe;color:#6d28d9;border-radius:10px;padding:12px 14px;margin-top:14px;font-size:13px;}
+  .dup-banner strong{display:block;margin-bottom:6px;}
+  .dup-banner .match{margin:4px 0;padding-left:2px;}
+  .dup-checking{color:var(--muted);font-style:italic;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">
+    <div>
+      <h1>🔆 Gestione Lead Fotovoltaico</h1>
+      <p class="subtitle">Incolla righe dal tuo CSV/Excel — il software riconosce automaticamente le colonne e qualifica i lead.</p>
+    </div>
+    <div id="crmStatus" class="crm-status crm-status-checking">⏳ Verifica connessione CRM…</div>
+  </div>
+
+  <div class="card">
+    <label class="paste-label" for="pasteArea">📋 INCOLLA DATI CSV</label>
+    <textarea id="pasteArea" placeholder="Copia/incolla qui le righe dal tuo CSV o Excel (CTRL+V / CMD+V)"></textarea>
+    <div class="row-actions">
+      <button class="primary" id="parseBtn">Analizza dati incollati</button>
+      <button class="ghost" id="sampleBtn">Carica riga di esempio</button>
+    </div>
+    <p class="hint">Apri il CSV/Excel → seleziona una o più righe → CTRL+C/CMD+C → torna qui → CTRL+V/CMD+V. Supporta righe singole, multiple, colonne singole, selezioni parziali e celle vuote.</p>
+    <div id="detectBanner"></div>
+  </div>
+
+  <details class="card" id="dupCard" style="padding:14px 20px;">
+    <summary style="cursor:pointer;font-weight:700;font-size:14px;">🔍 Database Trattative Esistenti (opzionale — controllo duplicati offline)</summary>
+    <p class="hint" style="margin-top:10px;">Quando il CRM live non è raggiungibile (o per includere anche l'indirizzo nel controllo), incolla qui un export delle trattative esistenti: Nome Business, Email, Numero Telefono, Indirizzo, Partner, Status — in qualsiasi ordine, con intestazione.</p>
+    <textarea id="dupPasteArea" placeholder="Incolla qui l'export delle trattative esistenti (con intestazione)" style="min-height:90px;"></textarea>
+    <div class="row-actions">
+      <button class="primary" id="dupParseBtn">Carica per controllo duplicati</button>
+      <button class="ghost" id="dupClearBtn">Svuota</button>
+      <span class="hint" id="dupCount" style="margin:0;"></span>
+    </div>
+  </details>
+
+  <div class="card" id="resultsCard" hidden>
+    <div id="summaryBar">
+      <div class="count" id="importCount"></div>
+      <div class="toolbar">
+        <button id="exportBtn">📊 ESPORTA EXCEL</button>
+        <button class="ghost" id="clearBtn">🗑️ Svuota tutto</button>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr><th></th><th>Stato</th><th>Azienda</th><th>Nome</th><th>Cognome</th><th>Spesa</th><th>kW</th><th>Tetto</th><th>Prov.</th><th>Partner</th></tr>
+      </thead>
+      <tbody id="previewBody"></tbody>
+    </table>
+  </div>
+
+  <div class="card" id="emptyCard">
+    <div class="empty-state">Nessun lead importato. Incolla i dati dal tuo CSV/Excel qui sopra per iniziare.</div>
+  </div>
+</div>
+
+<!-- Column mapping modal -->
+<div class="modal-overlay" id="mapModalOverlay" hidden>
+  <div class="modal">
+    <button class="modal-close" id="mapModalClose">✕</button>
+    <h2>🧩 Mappa le colonne incollate</h2>
+    <p class="modal-sub">Ho rilevato <b id="mapColCount"></b> colonne, diverse dalle 34 attese. Indica a cosa corrisponde ciascuna colonna incollata (in base al primo valore di esempio).</p>
+    <div id="mapColumns"></div>
+    <div class="modal-actions">
+      <button class="ghost" id="mapCancelBtn">Annulla</button>
+      <button class="primary" id="mapConfirmBtn">Conferma mappatura e importa</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lead detail modal -->
+<div class="modal-overlay" id="detailModalOverlay" hidden>
+  <div class="modal" style="max-width:760px;">
+    <button class="modal-close" id="detailModalClose">✕</button>
+    <h2 id="detailTitle"></h2>
+    <div id="detailStatus" style="margin-bottom:16px;"></div>
+    <div class="field-grid" id="detailFields"></div>
+    <div class="reasons" id="detailReasons"></div>
+    <div id="detailDuplicate"></div>
+    <div id="partnerSuggestions"></div>
+    <div class="modal-actions">
+      <button id="copyRiepilogoBtn">📋 COPIA RIEPILOGO</button>
+      <button id="copyRigaBtn">📄 COPIA RIGA</button>
+      <button class="primary" id="detailCloseBtn">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* =========================================================
+   1. MODELLO DATI — 34 colonne sorgente (ordine fisso)
+   ========================================================= */
+const SOURCE_FIELDS = [
+  'numero','nomeCognome','azienda','telefono','email','regione','indirizzo','citta',
+  'consumi','proprieta','spesaMensile','kw','tetto','tipoCopertura','pensiline','amianto',
+  'accumulo','soloIncentivi','fonteLead','valoreTrattativa','priorita','statoTrattativa',
+  'probabilitaChiusura','valorePonderato','dataPrimoContatto','disponibileSopralluogo',
+  'dataSopralluogo','prossimoFollowup','giorniFollowup','followupScaduto','note',
+  'caricatoCrm','consegnato','partner'
+];
+
+const FIELD_LABELS = {
+  numero:'N.', nomeCognome:'Nome e Cognome Referente', azienda:'Nome Azienda', telefono:'Telefono',
+  email:'Email', regione:'Regione', indirizzo:'indirizzo corretto dove installare il fotovoltaico', citta:'Città',
+  consumi:'Consumi Energetici (kWh/anno)', proprieta:'Immobile di proprietà',
+  spesaMensile:'Spesa Energetica Mensile (€)', kw:'kW da Installare',
+  tetto:'Metri Quadri Tetto Disponibili', tipoCopertura:'Tipo Copertura', pensiline:'Pensiline',
+  amianto:'Amianto', accumulo:'Accumulo/Batteria', soloIncentivi:'Vuole Solo Incentivi/Bandi',
+  fonteLead:'Fonte del Lead', valoreTrattativa:'Valore Trattativa (€)', priorita:'Priorità',
+  statoTrattativa:'Stato Trattativa', probabilitaChiusura:'Probabilità Chiusura (%)',
+  valorePonderato:'Valore Ponderato (€)', dataPrimoContatto:'Data Primo Contatto',
+  disponibileSopralluogo:'Disponibile per Sopralluogo', dataSopralluogo:'Data Sopralluogo',
+  prossimoFollowup:'Prossimo Follow-up', giorniFollowup:'Giorni al Follow-up',
+  followupScaduto:'Follow-up Scaduto', note:'Note', caricatoCrm:'Caricato sul CRM',
+  consegnato:'Consegnato', partner:'PARTNER'
+};
+
+let leads = [];
+let pendingRows = null; // rows awaiting manual column mapping
+
+/* =========================================================
+   2. LOOKUP PROVINCIA (capoluoghi + comuni comuni)
+   ========================================================= */
+const COMUNE_PROVINCIA = {
+  "agrigento":"AG","alessandria":"AL","ancona":"AN","aosta":"AO","arezzo":"AR","ascoli piceno":"AP",
+  "asti":"AT","avellino":"AV","bari":"BA","barletta":"BT","andria":"BT","trani":"BT","belluno":"BL",
+  "benevento":"BN","bergamo":"BG","biella":"BI","bologna":"BO","bolzano":"BZ","brescia":"BS",
+  "brindisi":"BR","cagliari":"CA","caltanissetta":"CL","campobasso":"CB","caserta":"CE","catania":"CT",
+  "catanzaro":"CZ","chieti":"CH","como":"CO","cosenza":"CS","cremona":"CR","crotone":"KR","cuneo":"CN",
+  "enna":"EN","fermo":"FM","ferrara":"FE","firenze":"FI","foggia":"FG","forli":"FC","cesena":"FC",
+  "forli-cesena":"FC","frosinone":"FR","genova":"GE","gorizia":"GO","grosseto":"GR","imperia":"IM",
+  "isernia":"IS","l aquila":"AQ","laquila":"AQ","la spezia":"SP","latina":"LT","lecce":"LE","lecco":"LC",
+  "livorno":"LI","lodi":"LO","lucca":"LU","macerata":"MC","mantova":"MN","massa":"MS","carrara":"MS",
+  "massa-carrara":"MS","matera":"MT","messina":"ME","milano":"MI","modena":"MO","monza":"MB",
+  "napoli":"NA","novara":"NO","nuoro":"NU","oristano":"OR","padova":"PD","palermo":"PA","parma":"PR",
+  "pavia":"PV","perugia":"PG","pesaro":"PU","urbino":"PU","pescara":"PE","piacenza":"PC","pisa":"PI",
+  "pistoia":"PT","pordenone":"PN","potenza":"PZ","prato":"PO","ragusa":"RG","ravenna":"RA",
+  "reggio calabria":"RC","reggio di calabria":"RC","reggio emilia":"RE","reggio nell emilia":"RE",
+  "rieti":"RI","rimini":"RN","roma":"RM","rovigo":"RO","salerno":"SA","sassari":"SS","savona":"SV",
+  "siena":"SI","siracusa":"SR","sondrio":"SO","taranto":"TA","teramo":"TE","terni":"TR","torino":"TO",
+  "trapani":"TP","trento":"TN","treviso":"TV","trieste":"TS","udine":"UD","varese":"VA","venezia":"VE",
+  "verbania":"VB","vercelli":"VC","verona":"VR","vibo valentia":"VV","vicenza":"VI","viterbo":"VT",
+  "carbonia":"SU","iglesias":"SU","sud sardegna":"SU",
+  // comuni non capoluogo frequenti
+  "marcianise":"CE","maddaloni":"CE","aversa":"CE","santa maria capua vetere":"CE","sessa aurunca":"CE",
+  "capua":"CE","piedimonte matese":"CE","mondragone":"CE","teano":"CE",
+  "pozzuoli":"NA","giugliano in campania":"NA","giugliano":"NA","torre del greco":"NA","casoria":"NA",
+  "afragola":"NA","castellammare di stabia":"NA","ercolano":"NA","portici":"NA","gragnano":"NA",
+  "san giorgio a cremano":"NA","marano di napoli":"NA","acerra":"NA","nola":"NA","sorrento":"NA",
+  "battipaglia":"SA","nocera inferiore":"SA","cava de tirreni":"SA","scafati":"SA","angri":"SA",
+  "eboli":"SA","pagani":"SA","vietri sul mare":"SA","amalfi":"SA",
+  "montesarchio":"BN","san giorgio del sannio":"BN",
+  "molfetta":"BA","bitonto":"BA","altamura":"BA","modugno":"BA","monopoli":"BA","conversano":"BA",
+  "bisceglie":"BT","canosa di puglia":"BT",
+  "fasano":"BR","ostuni":"BR","francavilla fontana":"BR",
+  "nardo":"LE","gallipoli":"LE","copertino":"LE","casarano":"LE","maglie":"LE",
+  "manfredonia":"FG","cerignola":"FG","san severo":"FG",
+  "corigliano-rossano":"CS","corigliano rossano":"CS","rende":"CS","castrovillari":"CS",
+  "lamezia terme":"CZ","soverato":"CZ",
+  "gioia tauro":"RC","locri":"RC","palmi":"RC","siderno":"RC",
+  "barcellona pozzo di gotto":"ME","milazzo":"ME","capo d orlando":"ME",
+  "marsala":"TP","mazara del vallo":"TP","alcamo":"TP","castellammare del golfo":"TP",
+  "bagheria":"PA","monreale":"PA","carini":"PA","termini imerese":"PA","cefalu":"PA",
+  "gela":"CL",
+  "vittoria":"RG","modica":"RG","comiso":"RG",
+  "acireale":"CT","caltagirone":"CT","giarre":"CT","aci castello":"CT","adrano":"CT","misterbianco":"CT",
+  "augusta":"SR","avola":"SR","noto":"SR",
+  "cinisello balsamo":"MI","sesto san giovanni":"MI","legnano":"MI","rho":"MI","cologno monzese":"MI",
+  "bollate":"MI","corsico":"MI","san giuliano milanese":"MI","segrate":"MI",
+  "busto arsizio":"VA","gallarate":"VA","saronno":"VA",
+  "vigevano":"PV","voghera":"PV",
+  "riccione":"RN","cattolica":"RN","cesenatico":"FC","forlimpopoli":"FC",
+  "faenza":"RA","lugo":"RA","imola":"BO","casalecchio di reno":"BO",
+  "carpi":"MO","sassuolo":"MO","formigine":"MO",
+  "cesano maderno":"MB","seregno":"MB","desio":"MB","lissone":"MB",
+  "moncalieri":"TO","rivoli":"TO","collegno":"TO","nichelino":"TO","chieri":"TO","pinerolo":"TO",
+  "aprilia":"LT","fondi":"LT","formia":"LT","terracina":"LT",
+  "guidonia montecelio":"RM","tivoli":"RM","pomezia":"RM","fiumicino":"RM","anzio":"RM","velletri":"RM",
+  "civitavecchia":"RM","albano laziale":"RM",
+  "empoli":"FI","scandicci":"FI","sesto fiorentino":"FI","campi bisenzio":"FI",
+  "carrara":"MS","viareggio":"LU","altopascio":"LU",
+  "cascina":"PI","pontedera":"PI",
+  "grottaglie":"TA","martina franca":"TA",
+  "chioggia":"VE","san dona di piave":"VE","mestre":"VE",
+  "montebelluna":"TV","castelfranco veneto":"TV","conegliano":"TV",
+  "bassano del grappa":"VI","schio":"VI","valdagno":"VI"
+};
+
+/* =========================================================
+   3. UTILITY DI NORMALIZZAZIONE
+   ========================================================= */
+function normalizeText(s){
+  return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[''`]/g,' ').replace(/-/g,' ').toLowerCase().replace(/\s+/g,' ').trim();
+}
+function toTitleCase(str){
+  if(!str) return '';
+  const s = String(str).trim();
+  if(!s) return '';
+  return s.toLowerCase().split(/(\s+)/).map(w=>{
+    if(/^\s+$/.test(w)) return w;
+    return w.split('-').map(p=> p.length? p[0].toUpperCase()+p.slice(1) : p).join('-');
+  }).join('');
+}
+function parseItNumber(str){
+  if(str===null||str===undefined) return null;
+  let s = String(str).trim();
+  if(!s) return null;
+  s = s.replace(/[€$]/g,'').replace(/kwh?/gi,'').replace(/m²|mq/gi,'').trim();
+  const m = s.match(/-?[\d.,]+/);
+  if(!m) return null;
+  let numStr = m[0];
+  if(numStr.includes(',') && numStr.includes('.')){
+    if(numStr.lastIndexOf(',') > numStr.lastIndexOf('.')){
+      numStr = numStr.replace(/\./g,'').replace(',', '.');
+    } else {
+      numStr = numStr.replace(/,/g,'');
+    }
+  } else if(numStr.includes(',')){
+    const parts = numStr.split(',');
+    const lastPart = parts[parts.length-1];
+    if(parts.length > 2 || lastPart.length === 3){
+      numStr = numStr.replace(/,/g,'');
+    } else {
+      numStr = numStr.replace(',', '.');
+    }
+  }
+  const n = parseFloat(numStr);
+  return isNaN(n) ? null : n;
+}
+function fmtNum(n){
+  if(n===null||n===undefined) return '';
+  return Number.isInteger(n) ? String(n) : String(Math.round(n*10)/10);
+}
+function parseBool(str){
+  if(str===null||str===undefined) return null;
+  const s = String(str).trim().toLowerCase();
+  if(!s) return null;
+  if(['si','sì','s','yes','true','vero','x'].includes(s)) return 'Sì';
+  if(['no','n','false','falso'].includes(s)) return 'No';
+  return toTitleCase(str);
+}
+function parseBoolStrict(str){
+  const s = String(str||'').trim().toLowerCase();
+  if(s==='true'||s==='vero'||s==='si'||s==='sì') return true;
+  if(s==='false'||s==='falso'||s==='no') return false;
+  return null;
+}
+function splitName(full){
+  const t = toTitleCase(full).trim();
+  if(!t) return {nome:'',cognome:''};
+  const parts = t.split(/\s+/);
+  if(parts.length===1) return {nome:parts[0], cognome:''};
+  return {nome:parts[0], cognome:parts.slice(1).join(' ')};
+}
+function findProvincia(citta, indirizzo){
+  const combo = (String(indirizzo||'')+' '+String(citta||''));
+  const codeMatch = combo.match(/\(([A-Za-z]{2})\)/);
+  if(codeMatch) return codeMatch[1].toUpperCase();
+  const cKey = normalizeText(citta);
+  if(cKey && COMUNE_PROVINCIA[cKey]) return COMUNE_PROVINCIA[cKey];
+  const cittaNorm = normalizeText(citta);
+  const indNorm = normalizeText(indirizzo);
+  function bestMatchIn(text){
+    let best = '', bestLen = 0;
+    for(const key in COMUNE_PROVINCIA){
+      if(key.length>3 && key.length>bestLen && containsWord(text, key)){
+        best = COMUNE_PROVINCIA[key]; bestLen = key.length;
+      }
+    }
+    return best;
+  }
+  if(cittaNorm){
+    const m = bestMatchIn(cittaNorm);
+    if(m) return m;
+  }
+  if(indNorm){
+    const m = bestMatchIn(indNorm);
+    if(m) return m;
+  }
+  return '';
+}
+function todayIt(){
+  const d = new Date();
+  return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+}
+
+/* =========================================================
+   4. PARSER — TAB / CSV con virgolette, righe/colonne, celle vuote
+   ========================================================= */
+function detectDelimiter(text){
+  const tabCount = (text.match(/\t/g)||[]).length;
+  const commaCount = (text.match(/,/g)||[]).length;
+  return tabCount >= commaCount && tabCount > 0 ? '\t' : (commaCount>0 ? ',' : '\t');
+}
+function parseDelimited(text, delim){
+  const rows=[]; let row=[]; let field=''; let inQuotes=false;
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(inQuotes){
+      if(c==='"'){
+        if(text[i+1]==='"'){ field+='"'; i++; }
+        else inQuotes=false;
+      } else field+=c;
+    } else {
+      if(c==='"'){ inQuotes=true; }
+      else if(c===delim){ row.push(field); field=''; }
+      else if(c==='\r'){ }
+      else if(c==='\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+      else field+=c;
+    }
+  }
+  if(field.length>0 || row.length>0){ row.push(field); rows.push(row); }
+  while(rows.length && rows[rows.length-1].every(f=>String(f).trim()==='')) rows.pop();
+  return rows;
+}
+function looksLikeHeader(row){
+  const joined = row.map(c=>normalizeText(c)).join('|');
+  const hints = ['nome e cognome','nome azienda','telefono','email','regione','citta','kw da installare','partner','n.'];
+  let hits = 0;
+  hints.forEach(h=>{ if(joined.includes(normalizeText(h))) hits++; });
+  return hits>=2;
+}
+function guessFieldForColumn(sampleValue, headerValue){
+  if(headerValue){
+    const hNorm = normalizeText(headerValue);
+    for(const f of SOURCE_FIELDS){
+      if(normalizeText(FIELD_LABELS[f]).includes(hNorm) || hNorm.includes(normalizeText(FIELD_LABELS[f]).split('(')[0].trim())){
+        return f;
+      }
+    }
+  }
+  const v = String(sampleValue||'').trim();
+  if(/@/.test(v)) return 'email';
+  if(/^[\d\s+]{8,}$/.test(v)) return 'telefono';
+  if(/kw/i.test(v)) return 'kw';
+  if(/m²|mq/i.test(v)) return 'tetto';
+  if(/€/.test(v)) return 'spesaMensile';
+  if(/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(v)) return 'dataPrimoContatto';
+  return '';
+}
+
+/* =========================================================
+   5. QUALIFICAZIONE
+   ========================================================= */
+function qualify(n){
+  const reasons=[]; const warnings=[];
+  const fieldIssues={}; // fieldKey -> 'red' | 'yellow', usato per evidenziare i campi nella scheda trattativa
+  let status='green';
+  if(n.proprieta==='No'){ status='red'; reasons.push('Immobile non di proprietà'); fieldIssues.proprieta='red'; }
+  if(n.soloIncentivi==='Sì'){ status='red'; reasons.push('Vuole solo incentivi/bandi (non acquisto impianto)'); fieldIssues.soloIncentivi='red'; }
+  const hasSpesa = n.spesaMensile!=null && n.spesaMensile>0;
+  const hasKw = n.kw!=null && n.kw>0;
+  const hasTetto = n.tettoMq!=null && n.tettoMq>0;
+  if(!hasSpesa && !hasKw){
+    status='red';
+    reasons.push('Dati economici e dimensione impianto mancanti');
+    fieldIssues.spesaMensileFmt='red';
+    fieldIssues.dimensioniImpianto='red';
+  }
+  if(status!=='red'){
+    if(!hasSpesa){ warnings.push('Spesa mensile non indicata'); fieldIssues.spesaMensileFmt='yellow'; }
+    if(!hasKw || !hasTetto){
+      if(!hasKw) warnings.push('kW da installare non indicati');
+      if(!hasTetto) warnings.push('Metri quadri tetto non indicati');
+      fieldIssues.dimensioniImpianto='yellow';
+    }
+    if(!n.proprieta){ warnings.push('Proprietà immobile non specificata'); fieldIssues.proprieta='yellow'; }
+    if(n.amianto==='Sì'){ warnings.push('Presenza amianto da verificare'); fieldIssues.amianto='yellow'; }
+    if(warnings.length>0) status='yellow';
+  }
+  return {status, reasons, warnings, fieldIssues};
+}
+function statusIcon(status){ return status==='green'?'🟢':status==='yellow'?'🟡':'🔴'; }
+function statusLabel(status){ return status==='green'?'QUALIFICATO':status==='yellow'?'DA VERIFICARE':'NON QUALIFICATO'; }
+
+/* =========================================================
+   5b. PARTNER — suggerimento a chi assegnare la trattativa
+   (partner con "Lead da Generare" > 0, da Lista Partner)
+   ========================================================= */
+const PARTNERS = [
+  {nome:"Sem SRLS", zona:"Frosinone, Latina, Roma, Viterbo", sede:"Frosinone", regione:"Lazio", attivo:true, status:"Attivo", contratto:15, valide:11, leadDaGenerare:4, priorita:true, statusVip:"", email:"info@smarteventmonitoring.com", telefono:"", closer:"Michele Maltese", pm:"Rosario Correa"},
+  {nome:"Lazzaroni SRL", zona:"Brescia, Monza-Brianza, Mantova, Milano, Varese, Pavia, Lodi, Lecco, Cremona, Verona, Parma, Piacenza", sede:"Rovato (Brescia)", regione:"Lombardia", attivo:true, status:"Attivo", contratto:15, valide:0, leadDaGenerare:15, priorita:true, statusVip:"", email:"c.versi@lazzaronisrl.com", telefono:"", closer:"", pm:"Rosario Correa"},
+  {nome:"Teknolight", zona:"Ascoli-Piceno, Macerata, Fermo, Teramo", sede:"Ascoli-Piceno", regione:"Marche", attivo:true, status:"Attivo", contratto:8, valide:6, leadDaGenerare:2, priorita:true, statusVip:"", email:"info@teknolight.eu", telefono:"", closer:"Michele Maltese", pm:""},
+  {nome:"Lumen", zona:"Monza-Brianza raggio di 100km", sede:"Ameda (MB)", regione:"Lombardia", attivo:true, status:"Attivo", contratto:23, valide:10, leadDaGenerare:13, priorita:true, statusVip:"", email:"info.rocksolar@gmail.com", telefono:"", closer:"Valery Crestani", pm:""},
+  {nome:"Diago S.R.L.", zona:"Brescia e Cremona", sede:"Via Guglielmo Ghislandi 45, Brescia (BS)", regione:"Lombardia", attivo:false, status:"Fermo", contratto:60, valide:48, leadDaGenerare:12, priorita:false, statusVip:"", email:"fotovoltaico@diagotlc.com", telefono:"", closer:"Pietro Campanella", pm:""},
+  {nome:"Energy Impianti di Bruno Giovanni", zona:"Lombardia con centro a Novara", sede:"Via Bernardino Caimi 22, Novara (NO)", regione:"Lombardia", attivo:false, status:"Fermo", contratto:20, valide:9, leadDaGenerare:11, priorita:false, statusVip:"", email:"giovanni.bruno.no@gmail.com", telefono:"", closer:"Pietro Campanella", pm:""},
+  {nome:"3Nergie SRL", zona:"Tutta la Lombardia: Bergamo, Brescia, Varese e Como (evitare il mantovano)", sede:"Via Campagnola 40, Bergamo (BG)", regione:"Lombardia", attivo:false, status:"Fermo", contratto:20, valide:11, leadDaGenerare:9, priorita:false, statusVip:"", email:"", telefono:"", closer:"Pietro Campanella", pm:""},
+  {nome:"O2 Impianti Srl", zona:"Provincia di Cremona", sede:"Via degli Artigiani 30, Sesto ed Uniti (CR)", regione:"Lombardia", attivo:false, status:"Fermo", contratto:15, valide:2, leadDaGenerare:13, priorita:false, statusVip:"", email:"info@o2impianti.com", telefono:"", closer:"Michele Maltese", pm:""},
+  {nome:"Energia Solare MN", zona:"Cagliari, Ogliastra, Medio Campidano, Carbonia-Iglesias, Basso Nuoro", sede:"Quarto Sant'Elena (Cagliari)", regione:"Sardegna", attivo:false, status:"Fermo", contratto:7, valide:2, leadDaGenerare:5, priorita:false, statusVip:"", email:"energiasolaremn@gmail.com", telefono:"", closer:"Michele Maltese", pm:""},
+  {nome:"Braga Group SRL", zona:"Lombardia (tranne Sondrio), Veneto (Verona, Vicenza, Padova), Piemonte (Alessandria, Asti, Biella, Novara, Vercelli)", sede:"Via San Gregorio 55, Milano (MI)", regione:"Lombardia", attivo:false, status:"Fermo", contratto:10, valide:8, leadDaGenerare:2, priorita:false, statusVip:"", email:"sopralluoghi@idraulicobraga.it", telefono:"", closer:"Michele Maltese", pm:"Rosario Correa"},
+  {nome:"Efficé", zona:"Cagliari, Sud Sardegna, 100km da Cagliari", sede:"Via Andrea Vesalio 4, Cagliari (CA)", regione:"Sardegna", attivo:false, status:"Fermo", contratto:10, valide:3, leadDaGenerare:7, priorita:false, statusVip:"", email:"maurizio.puddu@effice.it", telefono:"329 2346228 Maurizio", closer:"Michele Maltese", pm:""},
+  {nome:"V Energy", zona:"Dal centro al Sud Sardegna", sede:"Via della Croce 96, Gonnosfanadiga (CA)", regione:"Sardegna", attivo:false, status:"Fermo", contratto:10, valide:4, leadDaGenerare:6, priorita:false, statusVip:"", email:"venergysnc@gmail.com", telefono:"Valerio/Linda/Federico", closer:"", pm:""},
+  {nome:"Sienergy", zona:"Gorizia, Udine, Pordenone, Trieste, Venezia, Treviso, Padova, Rovigo", sede:"Via Aquileia 16, Villesse (GO)", regione:"Friuli-Venezia Giulia", attivo:false, status:"Fermo", contratto:15, valide:10, leadDaGenerare:5, priorita:false, statusVip:"Potenziale VIP", email:"info@sienergyconsulting.it", telefono:"Francesco/Stefano", closer:"", pm:""},
+  {nome:"Green Alma Emilia", zona:"Emilia-Romagna", sede:"", regione:"Emilia-Romagna", attivo:true, status:"Attivo", contratto:80, valide:79, leadDaGenerare:1, priorita:true, statusVip:"", email:"", telefono:"", closer:"Michele Maltese", pm:"Gaetano Gigliuto"},
+  {nome:"DMF", zona:"Palermo, Trapani, + Calabria", sede:"Via Garofalo 16, Partinico (PA)", regione:"Sicilia", attivo:false, status:"Fermo", contratto:10, valide:9, leadDaGenerare:1, priorita:false, statusVip:"", email:"edildidimaggiofabio@gmail.com", telefono:"Giuseppe", closer:"", pm:""},
+  {nome:"Solarelit SPA", zona:"Tutto il Nord Italia fino a Emilia-Romagna e Toscana comprese", sede:"Via Saffi Aurelio 21, Milano (MI)", regione:"Lombardia", attivo:false, status:"Rimborsato", contratto:8, valide:0, leadDaGenerare:8, priorita:false, statusVip:"Lista Nera", email:"daniela.carusone@solarelit.it", telefono:"", closer:"", pm:"Rosario Correa"},
+  {nome:"Petroenergy", zona:"Trebisacce con raggio 100km", sede:"Cosenza", regione:"Calabria", attivo:false, status:"In Onboarding", contratto:3, valide:0, leadDaGenerare:3, priorita:false, statusVip:"", email:"info@petroenergy.it", telefono:"Emanuele 328 6118000", closer:"Valery Crestani", pm:"Rosario Correa"},
+  {nome:"Green 6", zona:"Ferrara, Bologna, Rimini, Ravenna, Forlì-Cesena", sede:"Ravenna", regione:"Emilia-Romagna", attivo:false, status:"Fermo", contratto:5, valide:4, leadDaGenerare:1, priorita:false, statusVip:"Lista Nera", email:"commerciale@green6.it", telefono:"", closer:"", pm:"Rosario Correa"},
+  {nome:"Enisan", zona:"Torino, Cuneo, Asti, Alessandria", sede:"Via Arnaldo da Brescia 17, Torino (TO)", regione:"Piemonte", attivo:true, status:"Attivo", contratto:113, valide:105, leadDaGenerare:8, priorita:true, statusVip:"", email:"info@enisan.it", telefono:"", closer:"Michele Maltese", pm:"Rosario Correa"},
+  {nome:"Poweretika", zona:"Milano con raggio da 100km", sede:"Peschiera Borromeo, Milano", regione:"Lombardia", attivo:false, status:"In Onboarding", contratto:8, valide:0, leadDaGenerare:8, priorita:false, statusVip:"", email:"g.siciliani@poweretika.com", telefono:"Simone 349 6045171 - Giuseppe 380 4688289", closer:"", pm:"Rosario Correa"},
+  {nome:"Power Partner SRLS", zona:"Liguria", sede:"Genova", regione:"Liguria", attivo:false, status:"Rimborsato", contratto:18, valide:9, leadDaGenerare:9, priorita:false, statusVip:"Lista Nera", email:"commerciale@powerpartners.it", telefono:"Giorgio 328 2698990", closer:"Valery Crestani", pm:"Rosario Correa"},
+  {nome:"DGS Impianti e Servizi", zona:"Palermo con raggio di 100km", sede:"Carini, Palermo", regione:"Sicilia", attivo:false, status:"In Onboarding", contratto:5, valide:0, leadDaGenerare:5, priorita:false, statusVip:"", email:"dgsimpiantieservizi@gmail.com", telefono:"Donato", closer:"", pm:""},
+  {nome:"My System", zona:"Piacenza con raggio da 50km", sede:"Piacenza", regione:"Emilia-Romagna", attivo:false, status:"In Onboarding", contratto:3, valide:0, leadDaGenerare:3, priorita:false, statusVip:"", email:"mysystem1982@gmail.com", telefono:"Thierry", closer:"", pm:""},
+  {nome:"GTS Energy", zona:"Lombardia", sede:"Via Betty Ambiveri 25, Bergamo (BG)", regione:"Lombardia", attivo:false, status:"Da Ignorare", contratto:3, valide:0, leadDaGenerare:3, priorita:false, statusVip:"", email:"amministrazone@gtsenergy.it", telefono:"Ufficio 351 3300044", closer:"", pm:""},
+  {nome:"MP Impianti", zona:"Campania", sede:"Napoli", regione:"Campania", attivo:false, status:"In Onboarding", contratto:3, valide:0, leadDaGenerare:3, priorita:false, statusVip:"", email:"m.p.impianti21@gmail.com", telefono:"Pasquale 366 1238335", closer:"", pm:""},
+  {nome:"Phoenix Innovation", zona:"Firenze con raggio di 100km", sede:"Firenze e Pordenone", regione:"Toscana", attivo:false, status:"Da Ignorare", contratto:5, valide:0, leadDaGenerare:5, priorita:false, statusVip:"", email:"marcomoriphoenix@gmail.com", telefono:"Marco 377 9952714", closer:"", pm:""},
+  {nome:"Idrosolart SRL", zona:"Terni con raggio di 100km", sede:"Terni", regione:"Umbria", attivo:false, status:"Fermo", contratto:25, valide:21, leadDaGenerare:4, priorita:false, statusVip:"Potenziale VIP", email:"daniela@idrosolart.it", telefono:"Daniela 349 3516170", closer:"Valery Crestani", pm:""},
+  {nome:"De Masi Impianti SRL", zona:"Alessandria, Asti, Pavia, Torino, Vercelli, Piacenza", sede:"Tortona - Alessandria", regione:"Piemonte", attivo:false, status:"Da Ignorare", contratto:10, valide:9, leadDaGenerare:1, priorita:false, statusVip:"", email:"info@demasi-impianti.it", telefono:"Pietro 335 5604628", closer:"Valery Crestani", pm:""},
+  {nome:"Sole Energia", zona:"Catania, Ragusa, Siracusa", sede:"Ragusa", regione:"Sicilia", attivo:false, status:"Da Ignorare", contratto:10, valide:0, leadDaGenerare:10, priorita:false, statusVip:"VIP", email:"", telefono:"", closer:"Pietro Campanella", pm:"Rosario Correa"},
+  {nome:"Finea (San Giovanni in Persiceto)", zona:"100km da Bologna", sede:"San Giovanni in Persiceto (BO)", regione:"Emilia-Romagna", attivo:false, status:"Da Ignorare", contratto:9, valide:0, leadDaGenerare:9, priorita:false, statusVip:"VIP/Potenziale VIP", email:"valentina@fineagroup.it", telefono:"", closer:"Valery Crestani", pm:""},
+  {nome:"Monolit Srl", zona:"Sardegna", sede:"Via Perucca 1, Elmas (CA)", regione:"Sardegna", attivo:false, status:"Da Ignorare", contratto:15, valide:0, leadDaGenerare:15, priorita:false, statusVip:"VIP", email:"paoloboi76@gmail.com", telefono:"", closer:"Valery Crestani", pm:"Rosario Correa"},
+  {nome:"Sunpark", zona:"Lazio", sede:"Roma", regione:"Lazio", attivo:true, status:"Attivo", contratto:45, valide:27, leadDaGenerare:18, priorita:true, statusVip:"", email:"nominativi@sunpark.it", telefono:"", closer:"Valery Crestani", pm:"Rosario Correa"},
+  {nome:"Contract SRL", zona:"Friuli", sede:"Treviso", regione:"Friuli-Venezia Giulia", attivo:false, status:"Rimborsato", contratto:5, valide:0, leadDaGenerare:5, priorita:false, statusVip:"", email:"infopoint@contract.tv.it", telefono:"", closer:"Valery Crestani", pm:""},
+  {nome:"Full Energy Light", zona:"Parma, Piacenza, Modena, Reggio-Emilia, Cremona, Brescia", sede:"Piacenza", regione:"Emilia-Romagna", attivo:true, status:"Attivo", contratto:25, valide:23, leadDaGenerare:2, priorita:true, statusVip:"", email:"info@fullenergylightsrl.com", telefono:"", closer:"Michele Maltese", pm:"Rosario Correa"},
+  {nome:"Gekenergy", zona:"Bologna, Modena, Ferrara, Imola", sede:"Bologna", regione:"Emilia-Romagna", attivo:true, status:"Attivo", contratto:15, valide:13, leadDaGenerare:2, priorita:true, statusVip:"", email:"", telefono:"", closer:"Pietro Campanella", pm:"Rosario Correa"}
+];
+// sigla provincia -> nome provincia (capoluogo), derivato da COMUNE_PROVINCIA
+const SIGLA_TO_PROVINCIA_NAME = {};
+(function(){
+  // I capoluoghi sono inseriti per primi in COMUNE_PROVINCIA: la prima occorrenza
+  // di ogni sigla è quindi il nome del capoluogo/provincia.
+  Object.keys(COMUNE_PROVINCIA).forEach(nome=>{
+    const sigla = COMUNE_PROVINCIA[nome];
+    if(!SIGLA_TO_PROVINCIA_NAME[sigla]) SIGLA_TO_PROVINCIA_NAME[sigla] = nome;
+  });
+})();
+function containsWord(haystack, needle){
+  if(!needle || !haystack) return false;
+  const esc = needle.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const re = new RegExp('(^|[^a-z0-9])'+esc+'($|[^a-z0-9])');
+  return re.test(haystack);
+}
+function suggestPartners(n, limit){
+  limit = limit || 5;
+  const leadRegioneNorm = normalizeText(n.regione);
+  const leadProvinciaNome = SIGLA_TO_PROVINCIA_NAME[n.provincia] || '';
+  const leadProvinciaSigla = normalizeText(n.provincia);
+  const results = (livePartners || PARTNERS).map(p=>{
+    let score = 0; const reasons = [];
+    const zonaNorm = normalizeText(p.zona);
+    const regioneNorm = normalizeText(p.regione);
+    // Il match geografico è tra la PROVINCIA della trattativa erogata e le "zone di
+    // lavoro" dichiarate dal partner (criterio richiesto: provincia della trattativa
+    // presente tra le zone di lavoro del partner). L'indirizzo della sede NON viene
+    // usato per il match (spesso contiene nomi di vie fuorvianti, es. "Via Arnaldo
+    // da Brescia" a Torino), e nemmeno la città (troppo granulare rispetto a come i
+    // partner dichiarano la loro copertura).
+    const provinciaMatch = leadProvinciaNome && containsWord(zonaNorm, leadProvinciaNome);
+    const siglaMatch = leadProvinciaSigla && containsWord(zonaNorm, leadProvinciaSigla);
+    if(provinciaMatch || siglaMatch){
+      score += 100; reasons.push(`Copre la provincia di ${toTitleCase(leadProvinciaNome || n.provincia)} (${n.provincia})`);
+    } else if(leadRegioneNorm && (regioneNorm === leadRegioneNorm || containsWord(zonaNorm, leadRegioneNorm))){
+      score += 40; reasons.push(`Copre la regione ${n.regione} (nessuna provincia specifica indicata nelle zone di lavoro)`);
+    } else {
+      reasons.push('La provincia della trattativa non è tra le zone di lavoro dichiarate');
+    }
+    if(p.priorita){ score += 15; reasons.push('Partner prioritario'); }
+    if(p.attivo){ score += 8; reasons.push('Partner attivo'); } else { reasons.push(`Stato partner: ${p.status}`); }
+    score += Math.min(p.leadDaGenerare, 10);
+    reasons.push(`${p.leadDaGenerare} lead ancora da generare (${p.valide}/${p.contratto} da contratto)`);
+    return {partner:p, score, reasons};
+  });
+  results.sort((a,b)=> b.score - a.score || b.partner.leadDaGenerare - a.partner.leadDaGenerare);
+  return results.slice(0, limit);
+}
+function compatibilityLabel(score){
+  if(score >= 100) return {label:'Alta', cls:'compat-high'};
+  if(score >= 40) return {label:'Media', cls:'compat-mid'};
+  return {label:'Bassa', cls:'compat-low'};
+}
+
+/* =========================================================
+   5c. CONTROLLO DUPLICATI — evita di ridare la stessa
+   trattativa a più partner (email, telefono, azienda, via)
+   ========================================================= */
+let liveConnected = false;
+let livePartners = null;       // se il backend /api/partners risponde, sovrascrive PARTNERS
+let existingTrattative = [];   // dataset incollato offline (Nome Business, Email, Telefono, Indirizzo, Partner, Status)
+
+const DUP_FIELDS = ['azienda','nome','cognome','email','telefono','indirizzo','partner','status'];
+const DUP_FIELD_LABELS = {
+  azienda:'Nome Business', nome:'Nome', cognome:'Cognome', email:'Email',
+  telefono:'Numero Telefono', indirizzo:'Indirizzo', partner:'Partner', status:'Status'
+};
+function guessDupField(sampleValue, headerValue){
+  if(headerValue){
+    const hNorm = normalizeText(headerValue);
+    for(const f of DUP_FIELDS){
+      const lbl = normalizeText(DUP_FIELD_LABELS[f]);
+      if(lbl.includes(hNorm) || hNorm.includes(lbl)) return f;
+    }
+    if(hNorm.includes('azienda') || hNorm.includes('ragione sociale') || hNorm.includes('business')) return 'azienda';
+    if(hNorm.includes('mail')) return 'email';
+    if(hNorm.includes('tel') || hNorm.includes('cellulare') || hNorm.includes('phone')) return 'telefono';
+    if(hNorm.includes('indirizzo') || hNorm.includes('via') || hNorm.includes('address')) return 'indirizzo';
+  }
+  const v = String(sampleValue||'').trim();
+  if(/@/.test(v)) return 'email';
+  if(/^[\d\s+]{8,}$/.test(v)) return 'telefono';
+  return '';
+}
+function normalizeAddressTokens(addr){
+  const stop = ['via','viale','corso','strada','piazza','frazione','contrada','localita','loc','snc','n','numero','di','del','della','dei','delle'];
+  return normalizeText(addr).replace(/[.,'']/g,' ').split(/\s+/).filter(w=> w && !stop.includes(w));
+}
+function addressSimilar(a, b){
+  const wa = normalizeAddressTokens(a), wb = normalizeAddressTokens(b);
+  if(!wa.length || !wb.length) return false;
+  const setB = new Set(wb);
+  const sharedWords = wa.filter(w=> w.length>=4 && setB.has(w));
+  const sharedNumbers = wa.filter(w=> /^\d+$/.test(w) && setB.has(w));
+  return sharedWords.length>=1 && (sharedNumbers.length>=1 || sharedWords.length>=2);
+}
+function normPhoneKey(p){
+  let digits = String(p||'').replace(/\D/g,'');
+  if(!digits) return '';
+  if(digits.length>10 && digits.startsWith('0039')) digits = digits.slice(4);
+  else if(digits.length>10 && digits.startsWith('39')) digits = digits.slice(2);
+  return digits;
+}
+function offlineDuplicateMatches(n){
+  if(!existingTrattative.length) return [];
+  const matches = [];
+  const emailNorm = String(n.email||'').trim().toLowerCase();
+  const phoneKey = normPhoneKey(n.telefono);
+  const aziendaNorm = normalizeText(n.azienda);
+  existingTrattative.forEach(t=>{
+    const reasons = [];
+    if(emailNorm && t.email && String(t.email).trim().toLowerCase()===emailNorm) reasons.push('email');
+    if(phoneKey && t.telefono && normPhoneKey(t.telefono)===phoneKey) reasons.push('telefono');
+    if(aziendaNorm && t.azienda && normalizeText(t.azienda)===aziendaNorm) reasons.push('azienda');
+    if(n.indirizzo && t.indirizzo && addressSimilar(n.indirizzo, t.indirizzo)) reasons.push('indirizzo');
+    if(reasons.length){
+      matches.push({matchedOn:reasons.join('+'), azienda:t.azienda, nome:t.nome, cognome:t.cognome, email:t.email, telefono:t.telefono, indirizzo:t.indirizzo, partner:t.partner, status:t.status});
+    }
+  });
+  return matches;
+}
+async function liveDuplicateCheck(n){
+  if(!liveConnected) return null;
+  try{
+    const r = await fetch('/api/check-duplicate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email:n.email, telefono:n.telefono, azienda:n.azienda})
+    });
+    if(!r.ok) return null;
+    return await r.json();
+  }catch(e){ return null; }
+}
+function computeDuplicateOffline(n){
+  const offlineMatches = offlineDuplicateMatches(n);
+  return { status: offlineMatches.length ? 'found' : (liveConnected ? 'checking' : 'none'), matches: offlineMatches, checkedLive: false };
+}
+function refreshDuplicateLive(lead){
+  if(!liveConnected) return;
+  liveDuplicateCheck(lead.normalized).then(result=>{
+    const d = lead.duplicate;
+    d.checkedLive = true;
+    if(result && result.matches && result.matches.length){
+      const existingIds = new Set(d.matches.map(m=> m.email+'|'+m.telefono+'|'+m.azienda));
+      result.matches.forEach(m=>{
+        const key = m.email+'|'+m.telefono+'|'+m.azienda;
+        if(!existingIds.has(key)) d.matches.push(m);
+      });
+    }
+    d.status = d.matches.length ? 'found' : 'none';
+    renderAll();
+    if(currentDetailId === lead.id) openDetail(lead.id);
+  });
+}
+async function initLiveConnection(){
+  const badge = document.getElementById('crmStatus');
+  try{
+    const r = await fetch('/api/partners');
+    if(r.ok){
+      const data = await r.json();
+      if(Array.isArray(data.partners) && data.partners.length){
+        livePartners = data.partners;
+        liveConnected = true;
+        badge.className = 'crm-status crm-status-online';
+        badge.textContent = `🟢 CRM live connesso (${data.partners.length} partner)`;
+        // ricalcola i suggerimenti partner dei lead già importati con i dati live
+        leads.forEach(l=>{ recomputeLead(l); refreshDuplicateLive(l); });
+        renderAll();
+        return;
+      }
+    }
+    throw new Error('risposta non valida');
+  }catch(e){
+    liveConnected = false;
+    badge.className = 'crm-status crm-status-offline';
+    badge.textContent = '⚪ Modalità offline (dati statici / incolla manuale)';
+  }
+}
+
+/* =========================================================
+   6. COSTRUZIONE LEAD (modello interno)
+   ========================================================= */
+function buildRiepilogo(n){
+  const nomeCompleto = [n.nome, n.cognome].filter(Boolean).join(' ');
+  const title = `${n.azienda ? n.azienda+' — ' : ''}${nomeCompleto || '(nome non indicato)'}`;
+  const bullets = [];
+  bullets.push(`Telefono: ${n.telefono||'-'}`);
+  bullets.push(`Email: ${n.email||'-'}`);
+  bullets.push(`Indirizzo: ${n.indirizzo||'-'}${n.citta?', '+n.citta:''}${n.provincia?' ('+n.provincia+')':''}`);
+  bullets.push(`Spesa mensile: ${n.spesaMensileFmt||'-'}`);
+  bullets.push(`Dimensioni impianto: ${n.dimensioniImpianto||'-'}`);
+  bullets.push(`Immobile di proprietà: ${n.proprieta||'-'}`);
+  bullets.push(`Tipo copertura: ${n.tipoCopertura||'-'}`);
+  bullets.push(`Amianto: ${n.amianto||'-'}`);
+  bullets.push(`Accumulo/Batteria: ${n.accumulo||'-'}`);
+  bullets.push(`Vuole solo incentivi: ${n.soloIncentivi||'-'}`);
+  if(n.partner) bullets.push(`Partner assegnato: ${n.partner}`);
+  if(n.note) bullets.push(`Note: ${n.note}`);
+  return title + '\n' + bullets.map(b=> '• '+b).join('\n');
+}
+function buildLead(original, sourceRow){
+  const n = {};
+  n.nomeCompleto = toTitleCase(original.nomeCognome);
+  const {nome,cognome} = splitName(original.nomeCognome);
+  n.nome = nome; n.cognome = cognome;
+  n.azienda = toTitleCase(original.azienda);
+  n.telefono = (original.telefono||'').replace(/\s+/g,'');
+  n.email = (original.email||'').trim().toLowerCase();
+  n.regione = toTitleCase(original.regione);
+  n.indirizzo = toTitleCase(original.indirizzo);
+  n.citta = toTitleCase(original.citta);
+  n.provincia = findProvincia(original.citta, original.indirizzo);
+  n.consumi = parseItNumber(original.consumi);
+  n.proprieta = parseBool(original.proprieta);
+  n.spesaMensile = parseItNumber(original.spesaMensile);
+  n.kw = parseItNumber(original.kw);
+  n.tettoMq = parseItNumber(original.tetto);
+  n.tipoCopertura = original.tipoCopertura ? toTitleCase(original.tipoCopertura) : '';
+  n.pensiline = parseBool(original.pensiline);
+  n.amianto = parseBool(original.amianto);
+  n.accumulo = parseBool(original.accumulo);
+  n.soloIncentivi = parseBool(original.soloIncentivi);
+  n.fonteLead = original.fonteLead || '';
+  n.valoreTrattativa = parseItNumber(original.valoreTrattativa);
+  n.priorita = original.priorita || '';
+  n.statoTrattativa = original.statoTrattativa || '';
+  n.probabilitaChiusura = parseItNumber(original.probabilitaChiusura);
+  n.valorePonderato = parseItNumber(original.valorePonderato);
+  n.dataPrimoContatto = (original.dataPrimoContatto||'').trim();
+  n.disponibileSopralluogo = parseBool(original.disponibileSopralluogo);
+  n.dataSopralluogo = (original.dataSopralluogo||'').trim();
+  n.prossimoFollowup = (original.prossimoFollowup||'').trim();
+  n.giorniFollowup = original.giorniFollowup || '';
+  n.followupScaduto = parseBool(original.followupScaduto);
+  n.note = original.note || '';
+  n.caricatoCrm = parseBoolStrict(original.caricatoCrm);
+  n.consegnato = parseBoolStrict(original.consegnato);
+  n.partner = original.partner || '';
+  n.dataGenerazione = n.dataPrimoContatto || todayIt();
+  n.dimensioniImpianto = [n.kw!=null? fmtNum(n.kw)+' kW':'', n.tettoMq!=null? fmtNum(n.tettoMq)+' mq':''].filter(Boolean).join(' / ');
+  n.spesaMensileFmt = n.spesaMensile!=null ? '€'+fmtNum(n.spesaMensile) : '';
+  n.partnerSuggeriti = suggestPartners(n);
+  n.riepilogo = buildRiepilogo(n);
+  const qualification = qualify(n);
+  const lead = {
+    id: 'lead_'+Date.now()+'_'+sourceRow+'_'+Math.random().toString(36).slice(2,7),
+    sourceRow, original, normalized: n, qualification,
+    duplicate: computeDuplicateOffline(n)
+  };
+  return lead;
+}
+function recomputeLead(lead){
+  const n = lead.normalized;
+  n.dimensioniImpianto = [n.kw!=null? fmtNum(n.kw)+' kW':'', n.tettoMq!=null? fmtNum(n.tettoMq)+' mq':''].filter(Boolean).join(' / ');
+  n.spesaMensileFmt = n.spesaMensile!=null ? '€'+fmtNum(n.spesaMensile) : '';
+  n.partnerSuggeriti = suggestPartners(n);
+  n.riepilogo = buildRiepilogo(n);
+  lead.qualification = qualify(n);
+  lead.duplicate = computeDuplicateOffline(n);
+}
+
+/* =========================================================
+   7. INGESTIONE RIGHE
+   ========================================================= */
+function ingestRows(rows, fieldMapping){
+  let imported = 0;
+  rows.forEach((r, idx)=>{
+    if(r.every(f=>String(f).trim()==='')) return;
+    const original = {};
+    SOURCE_FIELDS.forEach(f=> original[f] = '');
+    fieldMapping.forEach((f, colIdx)=>{ if(f) original[f] = (r[colIdx]!=null? String(r[colIdx]) : '').trim(); });
+    const lead = buildLead(original, leads.length + idx + 1);
+    leads.push(lead);
+    imported++;
+    if(liveConnected) refreshDuplicateLive(lead);
+  });
+  renderAll();
+  showToast(`${imported} lead importati`);
+}
+
+/* =========================================================
+   8. GESTIONE INCOLLA
+   ========================================================= */
+const pasteArea = document.getElementById('pasteArea');
+const detectBanner = document.getElementById('detectBanner');
+
+pasteArea.addEventListener('paste', (e)=>{
+  const text = (e.clipboardData || window.clipboardData).getData('text');
+  if(text && text.trim()){
+    e.preventDefault();
+    pasteArea.value = text;
+    handlePastedText(text);
+  }
+});
+document.getElementById('parseBtn').addEventListener('click', ()=> handlePastedText(pasteArea.value));
+document.getElementById('sampleBtn').addEventListener('click', ()=>{
+  const sample = "1\tGiuseppe meraglia\tmeraglia costruzioni generali\t393512185481\tgiuseppemeraglia@gmail.com\tCampania\tvia circovallazione 10 caserta\tcaserta\t\tSì\t100 €\t20.0 kW\t100 m²\tAltro\tNo\tNo\tNo\tSì\t\t\t\t\t\t\t04/08/2026\tSì\t\t\t\tNo\tmandare un messaggio whatsapp prima di chiamare\tFALSE\tFALSE\t";
+  pasteArea.value = sample;
+  handlePastedText(sample);
+});
+
+function handlePastedText(text){
+  text = (text||'').replace(/﻿/g,'');
+  if(!text.trim()) return;
+  detectBanner.innerHTML = '';
+  const delim = detectDelimiter(text);
+  let rows = parseDelimited(text, delim);
+  rows = rows.filter(r => !(r.length===1 && r[0].trim()===''));
+  if(!rows.length) return;
+
+  let headerRow = null;
+  if(looksLikeHeader(rows[0])){
+    headerRow = rows[0];
+    rows = rows.slice(1);
+  }
+  if(!rows.length){ showToast('Nessuna riga di dati trovata'); return; }
+
+  const colCount = Math.max(...rows.map(r=>r.length));
+
+  if(colCount === SOURCE_FIELDS.length && !headerRow){
+    ingestRows(rows, SOURCE_FIELDS);
+    detectBanner.innerHTML = `<div class="banner">✅ Rilevate ${colCount} colonne (separatore ${delim==='\t'?'TAB':'virgola'}) — corrispondenza automatica con le 34 colonne standard.</div>`;
+    return;
+  }
+
+  // Se è presente un'intestazione, prova a mappare le colonne in base al NOME
+  // (non solo alla posizione): funziona anche se mancano colonne come "N.",
+  // "caricato sul crm", "consegnato" o "PARTNER", o se sono in un ordine diverso.
+  if(headerRow){
+    const mapping = headerRow.map((h, i)=> guessFieldForColumn(rows[0][i], h));
+    const matched = mapping.filter(Boolean).length;
+    if(matched >= headerRow.length - 1 && matched >= Math.ceil(headerRow.length * 0.7)){
+      ingestRows(rows, mapping);
+      detectBanner.innerHTML = `<div class="banner">✅ Intestazione riconosciuta (${matched}/${headerRow.length} colonne mappate per nome) — corrispondenza automatica.</div>`;
+      return;
+    }
+    // Intestazione presente ma troppo ambigua: apri la mappatura manuale pre-compilata.
+    pendingRows = rows;
+    openMappingModal(rows, colCount, headerRow);
+    return;
+  }
+
+  if(colCount === SOURCE_FIELDS.length){
+    ingestRows(rows, SOURCE_FIELDS);
+    detectBanner.innerHTML = `<div class="banner">✅ Rilevate ${colCount} colonne (separatore ${delim==='\t'?'TAB':'virgola'}) — corrispondenza automatica con le 34 colonne standard.</div>`;
+  } else {
+    pendingRows = rows;
+    showModeBanner(colCount, delim, headerRow);
+  }
+}
+
+function showModeBanner(colCount, delim, headerRow){
+  detectBanner.innerHTML = `
+    <div class="banner">
+      <strong>⚠️ Rilevate ${colCount} colonne (attese 34)</strong>
+      Come vuoi procedere?
+      <div class="btns" style="margin-top:10px;">
+        <button class="primary" id="modeFullBtn">📄 Ho copiato la riga completa dal CSV</button>
+        <button id="modePartialBtn">🧩 Ho copiato solo alcuni campi</button>
+      </div>
+    </div>`;
+  document.getElementById('modeFullBtn').onclick = ()=>{
+    detectBanner.innerHTML = '';
+    ingestRows(pendingRows, SOURCE_FIELDS);
+  };
+  document.getElementById('modePartialBtn').onclick = ()=>{
+    openMappingModal(pendingRows, colCount, headerRow);
+  };
+}
+
+/* =========================================================
+   8b. INCOLLA "DATABASE TRATTATIVE ESISTENTI" (controllo duplicati offline)
+   ========================================================= */
+const dupPasteArea = document.getElementById('dupPasteArea');
+const dupCountEl = document.getElementById('dupCount');
+document.getElementById('dupParseBtn').addEventListener('click', ()=>{
+  const text = dupPasteArea.value;
+  if(!text.trim()){ showToast('Incolla prima i dati'); return; }
+  const delim = detectDelimiter(text);
+  let rows = parseDelimited(text, delim);
+  rows = rows.filter(r => !(r.length===1 && r[0].trim()===''));
+  if(!rows.length){ showToast('Nessuna riga trovata'); return; }
+  let headerRow = null;
+  const joined = rows[0].map(c=>normalizeText(c)).join('|');
+  if(['nome business','email','telefono','indirizzo','partner'].some(h=> joined.includes(h))){
+    headerRow = rows[0];
+    rows = rows.slice(1);
+  }
+  const mapping = headerRow
+    ? headerRow.map((h,i)=> guessDupField(rows[0] ? rows[0][i] : '', h))
+    : DUP_FIELDS.slice(0, Math.max(...rows.map(r=>r.length)));
+  existingTrattative = rows.map(r=>{
+    const rec = {};
+    mapping.forEach((f, i)=>{ if(f) rec[f] = (r[i]||'').trim(); });
+    return rec;
+  }).filter(r=> r.email || r.telefono || r.azienda || r.indirizzo);
+  dupCountEl.textContent = `✅ ${existingTrattative.length} trattative caricate`;
+  showToast(`${existingTrattative.length} trattative caricate per il controllo duplicati`);
+  leads.forEach(l=>{ l.duplicate = computeDuplicateOffline(l.normalized); if(liveConnected) l.duplicate.checkedLive=false; });
+  renderAll();
+});
+document.getElementById('dupClearBtn').addEventListener('click', ()=>{
+  existingTrattative = [];
+  dupPasteArea.value = '';
+  dupCountEl.textContent = '';
+  leads.forEach(l=>{ l.duplicate = computeDuplicateOffline(l.normalized); });
+  renderAll();
+  showToast('Database trattative svuotato');
+});
+
+/* =========================================================
+   9. MODALE MAPPING COLONNE (selezione parziale)
+   ========================================================= */
+const mapModalOverlay = document.getElementById('mapModalOverlay');
+const mapColumnsEl = document.getElementById('mapColumns');
+let mapSelects = [];
+
+function openMappingModal(rows, colCount, headerRow){
+  document.getElementById('mapColCount').textContent = colCount;
+  mapColumnsEl.innerHTML = '';
+  mapSelects = [];
+  const firstRow = rows[0] || [];
+  for(let i=0;i<colCount;i++){
+    const sample = firstRow[i] || '';
+    const headerVal = headerRow ? headerRow[i] : '';
+    const guess = guessFieldForColumn(sample, headerVal);
+    const div = document.createElement('div');
+    div.className = 'map-col';
+    const options = ['<option value="">— Ignora colonna —</option>']
+      .concat(SOURCE_FIELDS.map(f=> `<option value="${f}" ${f===guess?'selected':''}>${FIELD_LABELS[f]}</option>`));
+    div.innerHTML = `
+      <div class="sample">COLONNA INCOLLATA ${i+1}${headerVal? ' ('+headerVal+')':''}<b>${sample || '(vuoto)'}</b></div>
+      <select data-col="${i}">${options.join('')}</select>`;
+    mapColumnsEl.appendChild(div);
+    mapSelects.push(div.querySelector('select'));
+  }
+  mapModalOverlay.hidden = false;
+}
+document.getElementById('mapModalClose').onclick = ()=> mapModalOverlay.hidden = true;
+document.getElementById('mapCancelBtn').onclick = ()=> mapModalOverlay.hidden = true;
+document.getElementById('mapConfirmBtn').onclick = ()=>{
+  const mapping = mapSelects.map(s=> s.value || null);
+  mapModalOverlay.hidden = true;
+  detectBanner.innerHTML = '';
+  ingestRows(pendingRows, mapping);
+};
+
+/* =========================================================
+   10. RENDER TABELLA ANTEPRIMA
+   ========================================================= */
+const resultsCard = document.getElementById('resultsCard');
+const emptyCard = document.getElementById('emptyCard');
+const previewBody = document.getElementById('previewBody');
+const importCount = document.getElementById('importCount');
+
+function renderAll(){
+  if(leads.length===0){
+    resultsCard.hidden = true;
+    emptyCard.hidden = false;
+    return;
+  }
+  resultsCard.hidden = false;
+  emptyCard.hidden = true;
+  importCount.textContent = `${leads.length} lead importat${leads.length===1?'o':'i'}`;
+  previewBody.innerHTML = '';
+  leads.forEach(lead=>{
+    const n = lead.normalized;
+    const dup = lead.duplicate || {status:'none', matches:[]};
+    const tr = document.createElement('tr');
+    tr.className = 'qrow-'+lead.qualification.status + (dup.status==='found' ? ' qrow-dupe' : '');
+    const dupIcon = dup.status==='found' ? `<span class="dup-icon" title="Possibile duplicato: già presente nel CRM (${dup.matches.map(m=>m.matchedOn).join(', ')})">🟣</span>`
+      : (dup.status==='checking' ? `<span class="dup-icon" title="Verifica in corso sul CRM live…">⏳</span>` : '');
+    tr.innerHTML = `
+      <td class="dup-cell">${dupIcon}</td>
+      <td><span class="status-pill status-${lead.qualification.status}">${statusIcon(lead.qualification.status)} ${statusLabel(lead.qualification.status)}</span></td>
+      <td class="editable" contenteditable="true" data-field="azienda">${n.azienda||''}</td>
+      <td class="editable" contenteditable="true" data-field="nome">${n.nome||''}</td>
+      <td class="editable" contenteditable="true" data-field="cognome">${n.cognome||''}</td>
+      <td class="editable" contenteditable="true" data-field="spesaMensile">${n.spesaMensile!=null?fmtNum(n.spesaMensile):''}</td>
+      <td class="editable" contenteditable="true" data-field="kw">${n.kw!=null?fmtNum(n.kw):''}</td>
+      <td class="editable" contenteditable="true" data-field="tettoMq">${n.tettoMq!=null?fmtNum(n.tettoMq):''}</td>
+      <td class="editable" contenteditable="true" data-field="provincia">${n.provincia||''}</td>
+      <td>${n.partner ? '✅ '+n.partner : (n.partnerSuggeriti && n.partnerSuggeriti[0] ? '<span class="hint" style="margin:0;">🎯 '+n.partnerSuggeriti[0].partner.nome+'</span>' : '')}</td>
+    `;
+    tr.dataset.id = lead.id;
+    tr.querySelectorAll('td.editable').forEach(td=>{
+      td.addEventListener('click', ev=> ev.stopPropagation());
+      td.addEventListener('blur', ()=>{
+        const field = td.dataset.field;
+        let val = td.textContent.trim();
+        if(['spesaMensile','kw','tettoMq'].includes(field)) val = parseItNumber(val);
+        n[field] = val;
+        recomputeLead(lead);
+        renderRowStatus(tr, lead);
+      });
+    });
+    tr.addEventListener('click', ()=> openDetail(lead.id));
+    previewBody.appendChild(tr);
+  });
+}
+function renderRowStatus(tr, lead){
+  tr.className = 'qrow-'+lead.qualification.status;
+  tr.querySelector('.status-pill').className = 'status-pill status-'+lead.qualification.status;
+  tr.querySelector('.status-pill').textContent = `${statusIcon(lead.qualification.status)} ${statusLabel(lead.qualification.status)}`;
+}
+
+/* =========================================================
+   11. MODALE DETTAGLIO LEAD
+   ========================================================= */
+const detailModalOverlay = document.getElementById('detailModalOverlay');
+let currentDetailId = null;
+
+const OUTPUT_FIELDS = [
+  {key:'azienda', label:'Nome Business'},
+  {key:'nome', label:'Nome'},
+  {key:'cognome', label:'Cognome'},
+  {key:'indirizzo', label:'Indirizzo esatto'},
+  {key:'provincia', label:'Provincia'},
+  {key:'spesaMensileFmt', label:'Spesa Mensile', editKey:'spesaMensile'},
+  {key:'dimensioniImpianto', label:'Dimensioni Impianto'},
+  {key:'proprieta', label:'Immobile di Proprietà'},
+  {key:'soloIncentivi', label:'Vuole Solo Incentivi'},
+  {key:'amianto', label:'Amianto'},
+  {key:'dataGenerazione', label:'Data di generazione'},
+  {key:'telefono', label:'Telefono'},
+  {key:'email', label:'Email'},
+  {key:'citta', label:'Città'},
+  {key:'partner', label:'Partner Assegnato'},
+  {key:'note', label:'Note', full:true},
+  {key:'riepilogo', label:'Riepilogo contatto', full:true, textarea:true}
+];
+
+function renderDetailDuplicate(lead){
+  const el = document.getElementById('detailDuplicate');
+  const dup = lead.duplicate || {status:'none', matches:[]};
+  if(dup.status==='found'){
+    const rows = dup.matches.map(m=>{
+      const bits = [m.azienda, [m.nome,m.cognome].filter(Boolean).join(' '), m.email, m.telefono, m.partner, m.status].filter(Boolean).join(' — ');
+      return `<div class="match">⚠️ Corrisponde per <b>${m.matchedOn}</b>: ${bits}</div>`;
+    }).join('');
+    el.innerHTML = `<div class="dup-banner"><strong>🟣 Possibile duplicato — già presente nel CRM</strong>${rows}</div>`;
+  }else if(dup.status==='checking'){
+    el.innerHTML = `<div class="dup-banner dup-checking">⏳ Verifica duplicati in corso sul CRM live…</div>`;
+  }else{
+    el.innerHTML = '';
+  }
+}
+
+function openDetail(id){
+  const lead = leads.find(l=>l.id===id);
+  if(!lead) return;
+  currentDetailId = id;
+  const n = lead.normalized;
+  document.getElementById('detailTitle').textContent = `${n.azienda || n.nomeCompleto || 'Lead'} ${lead.sourceRow?('— riga '+lead.sourceRow):''}`;
+  document.getElementById('detailStatus').innerHTML = `<span class="status-pill status-${lead.qualification.status}">${statusIcon(lead.qualification.status)} ${statusLabel(lead.qualification.status)}</span>`;
+
+  const grid = document.getElementById('detailFields');
+  grid.innerHTML = '';
+  OUTPUT_FIELDS.forEach(f=>{
+    const value = n[f.key] || '';
+    const div = document.createElement('div');
+    const issue = lead.qualification.fieldIssues ? lead.qualification.fieldIssues[f.key] : null;
+    div.className = 'field' + (f.full ? ' full' : '') + (issue ? ' field-'+issue : '');
+    const editKey = f.editKey || f.key;
+    const inputHtml = f.textarea
+      ? `<textarea data-key="${editKey}">${value}</textarea>`
+      : `<input type="text" data-key="${editKey}" value="${value.replace(/"/g,'&quot;')}">`;
+    div.innerHTML = `
+      <label>${f.label}</label>
+      <div class="valrow">
+        ${inputHtml}
+        <button class="small" data-copy="${f.key}">COPIA</button>
+      </div>`;
+    grid.appendChild(div);
+  });
+
+  grid.querySelectorAll('input,textarea').forEach(inp=>{
+    inp.addEventListener('change', ()=>{
+      const key = inp.dataset.key;
+      let val = inp.value;
+      if(['spesaMensile','kw','tettoMq'].includes(key)) val = parseItNumber(val);
+      n[key] = val;
+      recomputeLead(lead);
+      openDetail(id); // re-render with recalculated fields
+      renderAll();
+    });
+  });
+  grid.querySelectorAll('button[data-copy]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const key = btn.dataset.copy;
+      copyText(String(n[key] || ''));
+    });
+  });
+
+  const reasonsEl = document.getElementById('detailReasons');
+  let html = '';
+  lead.qualification.reasons.forEach(r=> html += `<div class="r">🔴 ${r}</div>`);
+  lead.qualification.warnings.forEach(w=> html += `<div class="w">🟡 ${w}</div>`);
+  reasonsEl.innerHTML = html;
+
+  renderDetailDuplicate(lead);
+  renderPartnerSuggestions(lead);
+
+  detailModalOverlay.hidden = false;
+}
+function renderPartnerSuggestions(lead){
+  const n = lead.normalized;
+  const container = document.getElementById('partnerSuggestions');
+  const suggestions = n.partnerSuggeriti || [];
+  let html = `<div class="suggest-header"><strong>🎯 A chi assegnare la trattativa</strong><span class="hint" style="margin:0;">Partner con lead ancora da generare, ordinati per compatibilità con questo lead</span></div>`;
+  if(n.partner){
+    html += `<div class="assigned-banner">✅ Assegnato a <b>${n.partner}</b> <button class="small ghost" id="unassignPartnerBtn">Rimuovi assegnazione</button></div>`;
+  }
+  html += '<div class="suggest-list">';
+  suggestions.forEach((s, idx)=>{
+    const compat = compatibilityLabel(s.score);
+    const isAssigned = n.partner === s.partner.nome;
+    html += `
+      <div class="suggest-card ${isAssigned?'is-assigned':''}">
+        <div class="suggest-top">
+          <span class="suggest-name">${idx===0?'⭐ ':''}${s.partner.nome}</span>
+          <span class="compat-badge ${compat.cls}">${compat.label}</span>
+        </div>
+        <div class="suggest-reasons">${s.reasons.map(r=>`<span class="reason-chip">${r}</span>`).join('')}</div>
+        <button class="small ${isAssigned?'':'primary'}" data-assign="${s.partner.nome}" ${isAssigned?'disabled':''}>${isAssigned?'Assegnato ✓':'Assegna a questo partner'}</button>
+      </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+
+  container.querySelectorAll('button[data-assign]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      n.partner = btn.dataset.assign;
+      recomputeLead(lead);
+      openDetail(lead.id);
+      renderAll();
+      showToast(`Trattativa assegnata a ${n.partner}`);
+    });
+  });
+  const unassignBtn = document.getElementById('unassignPartnerBtn');
+  if(unassignBtn){
+    unassignBtn.addEventListener('click', ()=>{
+      n.partner = '';
+      recomputeLead(lead);
+      openDetail(lead.id);
+      renderAll();
+    });
+  }
+}
+document.getElementById('detailModalClose').onclick = ()=> detailModalOverlay.hidden = true;
+document.getElementById('detailCloseBtn').onclick = ()=> detailModalOverlay.hidden = true;
+document.getElementById('copyRiepilogoBtn').onclick = ()=>{
+  const lead = leads.find(l=>l.id===currentDetailId);
+  if(lead) copyText(lead.normalized.riepilogo);
+};
+document.getElementById('copyRigaBtn').onclick = ()=>{
+  const lead = leads.find(l=>l.id===currentDetailId);
+  if(!lead) return;
+  const n = lead.normalized;
+  const row = [n.azienda, n.nome, n.cognome, n.indirizzo, n.provincia, n.spesaMensileFmt, n.dimensioniImpianto, n.dataGenerazione, n.riepilogo.replace(/\n/g,' | '), n.partner||''];
+  copyText(row.join('\t'));
+};
+
+/* =========================================================
+   12. COPIA / TOAST
+   ========================================================= */
+function copyText(text){
+  const fallback = ()=>{
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+    showToast('Copiato negli appunti');
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=> showToast('Copiato negli appunti')).catch(fallback);
+  } else fallback();
+}
+let toastTimer = null;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 2200);
+}
+
+/* =========================================================
+   13. EXPORT EXCEL
+   ========================================================= */
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  if(!leads.length){ showToast('Nessun lead da esportare'); return; }
+  const headers = ['Nome Business','Nome','Cognome','Indirizzo esatto','Provincia','Spesa Mensile','Dimensioni Impianto','Data di generazione','Riepilogo contatto','Stato Qualifica','Motivo Non Qualificazione','Partner Assegnato/Consigliato','Duplicato','Duplicato - Dettaglio'];
+  const rows = leads.map(l=>{
+    const n = l.normalized;
+    const topSuggestion = n.partnerSuggeriti && n.partnerSuggeriti[0] ? n.partnerSuggeriti[0].partner.nome : '';
+    const partnerCol = n.partner ? n.partner : (topSuggestion ? topSuggestion+' (consigliato)' : '');
+    const dup = l.duplicate || {status:'none', matches:[]};
+    const dupCol = dup.status==='found' ? 'Sì' : (dup.status==='checking' ? 'Verifica in corso' : 'No');
+    const dupDetail = dup.matches.map(m=>{
+      const bits = [m.azienda, [m.nome,m.cognome].filter(Boolean).join(' '), m.email, m.telefono, m.partner].filter(Boolean).join(' / ');
+      return `${m.matchedOn}: ${bits}`;
+    }).join(' | ');
+    return [
+      n.azienda, n.nome, n.cognome, n.indirizzo, n.provincia, n.spesaMensileFmt,
+      n.dimensioniImpianto, n.dataGenerazione, n.riepilogo,
+      `${statusIcon(l.qualification.status)} ${statusLabel(l.qualification.status)}`,
+      l.qualification.reasons.concat(l.qualification.warnings).join('; '),
+      partnerCol, dupCol, dupDetail
+    ];
+  });
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  ws['!cols'] = [{wch:22},{wch:14},{wch:16},{wch:26},{wch:8},{wch:12},{wch:18},{wch:14},{wch:45},{wch:16},{wch:35},{wch:26},{wch:10},{wch:40}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Lead');
+  const now = new Date();
+  const stamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+  XLSX.writeFile(wb, `lead_fotovoltaico_${stamp}.xlsx`);
+});
+
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  if(!leads.length) return;
+  if(confirm('Svuotare tutti i lead importati?')){
+    leads = [];
+    renderAll();
+    pasteArea.value = '';
+    detectBanner.innerHTML = '';
+  }
+});
+
+renderAll();
+initLiveConnection();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestione Lead Fotovoltaico — Incolla CSV</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --green:#16a34a; --green-bg:#dcfce7; --green-bd:#86efac;
+    --yellow:#ca8a04; --yellow-bg:#fef9c3; --yellow-bd:#fde047;
+    --red:#dc2626; --red-bg:#fee2e2; --red-bd:#fca5a5;
+    --ink:#1e293b; --muted:#64748b; --line:#e2e8f0; --bg:#f8fafc;
+    --accent:#2563eb; --accent-dark:#1d4ed8;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0;padding:24px;}
+  .wrap{max-width:1180px;margin:0 auto;}
+  h1{font-size:22px;margin:0 0 4px;}
+  .subtitle{color:var(--muted);font-size:14px;margin:0 0 20px;}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:20px;}
+  .paste-label{font-weight:700;font-size:15px;margin-bottom:8px;display:block;}
+  #pasteArea{width:100%;min-height:140px;border:2px dashed #cbd5e1;border-radius:10px;padding:14px;font-size:14px;font-family:ui-monospace,Menlo,Consolas,monospace;resize:vertical;background:#fbfdff;}
+  #pasteArea:focus{outline:none;border-color:var(--accent);background:#fff;}
+  .hint{color:var(--muted);font-size:12.5px;margin-top:8px;}
+  .row-actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;align-items:center;}
+  button{cursor:pointer;font-size:13.5px;border-radius:8px;border:1px solid var(--line);background:#fff;padding:9px 14px;font-weight:600;color:var(--ink);transition:.15s;}
+  button:hover{border-color:var(--accent);color:var(--accent);}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  button.primary:hover{background:var(--accent-dark);color:#fff;}
+  button.ghost{background:transparent;border-color:transparent;color:var(--muted);}
+  button.small{padding:5px 9px;font-size:12px;border-radius:6px;}
+  button:disabled{opacity:.45;cursor:not-allowed;}
+  .banner{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 16px;margin-top:14px;font-size:13.5px;}
+  .banner strong{display:block;margin-bottom:8px;font-size:14px;}
+  .banner .btns{display:flex;gap:10px;flex-wrap:wrap;}
+  #summaryBar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;}
+  #summaryBar .count{font-weight:700;font-size:16px;}
+  #summaryBar .toolbar{display:flex;gap:8px;flex-wrap:wrap;}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;}
+  th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;font-weight:700;}
+  tbody tr{cursor:pointer;}
+  tbody tr:hover{background:#f8fafc;}
+  td.editable{cursor:text;}
+  td.editable:focus{outline:2px solid var(--accent);outline-offset:-2px;background:#fff;}
+  .status-pill{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:12px;padding:3px 9px;border-radius:999px;}
+  .status-green{background:var(--green-bg);color:var(--green);}
+  .status-yellow{background:var(--yellow-bg);color:var(--yellow);}
+  .status-red{background:var(--red-bg);color:var(--red);}
+  tr.qrow-green{background:#f0fdf4;}
+  tr.qrow-yellow{background:#fefce8;}
+  tr.qrow-red{background:#fef2f2;}
+  .empty-state{text-align:center;color:var(--muted);padding:40px 20px;font-size:14px;}
+  /* Modal */
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto;z-index:50;}
+  .modal-overlay[hidden]{display:none;}
+  .modal{background:#fff;border-radius:14px;max-width:820px;width:100%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+  .modal h2{margin:0 0 6px;font-size:18px;}
+  .modal .modal-sub{color:var(--muted);font-size:13px;margin-bottom:18px;}
+  .modal-close{float:right;background:none;border:none;font-size:20px;color:var(--muted);padding:2px 6px;}
+  .map-col{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;}
+  .map-col .sample{flex:1;min-width:180px;font-size:12.5px;color:var(--muted);}
+  .map-col .sample b{display:block;color:var(--ink);font-size:13.5px;font-weight:600;word-break:break-word;}
+  .map-col select{padding:7px 8px;border-radius:8px;border:1px solid var(--line);font-size:13px;min-width:220px;}
+  .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 20px;}
+  .field-grid .full{grid-column:1/-1;}
+  .field{border:1px solid var(--line);border-radius:10px;padding:10px 12px;}
+  .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:700;margin-bottom:6px;}
+  .field .valrow{display:flex;gap:8px;align-items:flex-start;}
   .field input[type=text], .field textarea{width:100%;border:1px solid transparent;background:#f8fafc;border-radius:6px;padding:6px 8px;font-size:13.5px;font-family:inherit;}
   .field textarea{min-height:70px;resize:vertical;}
   .field input[type=text]:focus, .field textarea:focus{outline:none;border-color:var(--accent);background:#fff;}
