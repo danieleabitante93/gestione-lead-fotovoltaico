@@ -1,0 +1,9 @@
+{
+  "name": "gestione-lead-fotovoltaico",
+  "version": "1.0.0",
+  "private": true,
+  "description": "App gestione lead fotovoltaico con controllo duplicati e suggerimento partner in tempo reale dal CRM Coda/Superhuman",
+  "engines": {
+    "node": ">=18"
+  }
+}
